@@ -4,9 +4,11 @@ Python bot to send messages to all friends on Reddit before closing your account
 
 ![Screenshot](https://i.imgur.com/OglGdCB.png)
 
-### Install dependencies
+### Dependencies
 
-    pip3 install praw
+    python 3
+    pip3
+    praw
 
 ### Fill in the blanks     
 
