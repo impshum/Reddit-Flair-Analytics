@@ -6,7 +6,7 @@ reddit_pass = 'XXXX'
 user_agent = 'Bye Bye Reddit (by /u/impshum)'
 
 # How many seconds between messages
-timer = 1
+timer = 30
 
 # Use '{}' in message_text to insert username if on (1=on 0=off)
 include_username = 1
