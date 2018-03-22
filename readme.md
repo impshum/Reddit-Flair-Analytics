@@ -1,19 +1,30 @@
-# Goodbye Reddit
+# Reddit Flair Analytics
 
-Python bot to send messages to all friends on Reddit before closing your account, moving to Mars or just for fun.
+Python bot to analyse a sureddit history and create pretty graphs from the results.
 
-![Screenshot](https://i.imgur.com/OglGdCB.png)
+![Screenshot](https://i.imgur.com/pirXgWL.png)
 
-### Dependencies
+### Install dependencies
 
-    python 3
-    pip3
-    praw
+    pip3 install -r requirements.txt
 
 ### Fill in the blanks     
 
 Enter all your juicy details into config.py
 
+### Arguments
+
+-h, --help            Show this help message and exit
+-s , --sub            Which subreddit to target
+-m , --months     How many months to get history of
+-a, --all                Pass this to get all history from the dawn of time
+
 ### Run it
 
-    python3 run.py
+Get 6 month of data from /r/fpvracing
+
+    python3 run.py -m 6 -s fpvracing
+
+Get all data from /r/fpvracing in 1 month chunks
+
+    python3 run.py -a -m 1 -s fpvracing
