@@ -14,10 +14,10 @@ Enter all your juicy details into config.py
 
 ### Arguments
 
--h, --help            Show this help message and exit
--s , --sub            Which subreddit to target
--m , --months     How many months to get history of
--a, --all                Pass this to get all history from the dawn of time
+* -h, --help            Show this help message and exit
+* -s , --sub            Which subreddit to target
+* -m , --months     How many months to get history of
+*  -a, --all                Pass this to get all history from the dawn of time
 
 ### Run it
 
