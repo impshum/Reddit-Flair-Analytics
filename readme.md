@@ -1,6 +1,6 @@
 # Reddit Flair Analytics
 
-Python bot to analyse a sureddit history and create pretty graphs from the results.
+Python bot to analyse a subreddit history and create pretty graphs from the results.
 
 ![Screenshot](https://i.imgur.com/pirXgWL.png)
 
