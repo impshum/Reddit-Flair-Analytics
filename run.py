@@ -1,3 +1,4 @@
+import os
 import time
 import praw
 import numpy as np
@@ -13,12 +14,23 @@ from config import *
 class C:
     green, red, white, yellow = '\033[92m', '\033[91m', '\033[0m', '\033[93m'
 
+
+script_dir = os.path.dirname(__file__)
+bar_file = 'graphs/bar.png'
+pi_file = 'graphs/pi.png'
+bar_path = os.path.join(script_dir, bar_file)
+pi_path = os.path.join(script_dir, pi_file)
+
 try:
     parser = argparse.ArgumentParser()
-    parser = argparse.ArgumentParser(description="Reddit Flair Analytics (by /u/impshum)")
-    parser.add_argument('-s', '--sub', help="Which subreddit to target", type=str)
-    parser.add_argument('-m', '--months', help="How many months to get history of", type=int)
-    parser.add_argument('-a', '--all', action='store_true', help="Pass this to get all history from the dawn of time")
+    parser = argparse.ArgumentParser(
+        description="Reddit Flair Analytics (by /u/impshum)")
+    parser.add_argument(
+        '-s', '--sub', help="Which subreddit to target", type=str)
+    parser.add_argument(
+        '-m', '--months', help="How many months to get history of", type=int)
+    parser.add_argument('-a', '--all', action='store_true',
+                        help="Pass this to get all history from the dawn of time")
     args = parser.parse_args()
 
     months_back = args.months
@@ -29,7 +41,6 @@ try:
         all_history = args.all
     else:
         all_history = False
-
 
     print(C.yellow + """
 ╔═╗╦  ╔═╗╦╦═╗  ╔═╗╔╗╔╔═╗╦ ╦ ╦╔╦╗╦╔═╗╔═╗
@@ -119,7 +130,7 @@ try:
         ax.legend(('Flair Count', 'Score', 'Comments'))
         plt.xticks(x, count.keys(), rotation=0)
         plt.tight_layout()
-        plt.savefig("graphs/bar.png", dpi=300)
+        plt.savefig(bar_path, dpi=300)
         # plt.show()
 
         itemz = collections.OrderedDict(count)
@@ -135,9 +146,8 @@ try:
                 shadow=False, startangle=90)
         ax1.axis('equal')
         plt.tight_layout()
-        plt.savefig("graphs/pi.png", dpi=300)
+        plt.savefig(pi_path, dpi=300)
         # plt.show()
-
 
     plot()
     msg = 'Total posts: ' + str(counter - 1)
@@ -163,4 +173,3 @@ except Exception as e:
     print(C.white + '\nExiting\n')
 except KeyboardInterrupt:
     print(C.white + '\nExiting\n')
-
