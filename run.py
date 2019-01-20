@@ -1,175 +1,134 @@
-import os
-import time
-import praw
-import numpy as np
-import matplotlib.pyplot as plt
-import collections
-import datetime
+from psaw import PushshiftAPI
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
+import matplotlib.pyplot as plt
+from requests import get
 from halo import Halo
+import pandas as pd
 import argparse
-from config import *
 
 
-class C:
-    green, red, white, yellow = '\033[92m', '\033[91m', '\033[0m', '\033[93m'
-
-
-script_dir = os.path.dirname(__file__)
-bar_file = 'graphs/bar.png'
-pi_file = 'graphs/pi.png'
-bar_path = os.path.join(script_dir, bar_file)
-pi_path = os.path.join(script_dir, pi_file)
-
-try:
-    parser = argparse.ArgumentParser()
+def get_args():
     parser = argparse.ArgumentParser(
-        description="Reddit Flair Analytics (by /u/impshum)")
+        description="Reddit Flair Analytics (by /u/impshum)",
+        epilog='Example: run.py -s python -m 1')
     parser.add_argument(
-        '-s', '--sub', help="Which subreddit to target", type=str)
+        '-s', '--sub', help="Target subreddit", type=str)
     parser.add_argument(
-        '-m', '--months', help="How many months to get history of", type=int)
-    parser.add_argument('-a', '--all', action='store_true',
-                        help="Pass this to get all history from the dawn of time")
-    args = parser.parse_args()
+        '-d', '--days', help="How many days", type=int)
+    parser.add_argument(
+        '-m', '--months', help="How many months", type=int)
+    parser.add_argument(
+        '-y', '--years', help="How many years", type=int)
+    return parser.parse_args()
 
-    months_back = args.months
-    all_history = args.all
-    my_subreddit = args.sub
 
-    if args.all:
-        all_history = args.all
+def search(sub, back):
+    dt = datetime.now() - back
+    timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
+
+    api = PushshiftAPI()
+    gen = api.search_submissions(
+        subreddit=sub, aggs='created_utc+link_flair_text+score+num_comments', after=timestamp)
+
+    flairs = {}
+    flair_scores = {}
+    flair_count = {}
+    flair_comment_count = {}
+
+    c = 0
+
+    for post in gen:
+        created = datetime.fromtimestamp(post.created_utc).strftime('%d/%m/%Y')
+        score = post.score
+        num_comments = post.num_comments
+
+        try:
+            flair = post.link_flair_text
+        except Exception:
+            flair = 0
+            pass
+
+        if flair:
+            flair_scores.update({flair: score})
+
+            try:
+                score = flair_scores[flair] + score
+            except Exception:
+                pass
+
+            try:
+                count = flair_count[flair] + 1
+                flair_count.update({flair: count})
+            except Exception:
+                flair_count.update({flair: 1})
+
+            try:
+                if flair == 'RANT':
+                    print(num_comments)
+
+                new_comments = flair_comment_count[flair] + num_comments
+                flair_comment_count.update({flair: new_comments})
+
+
+
+            except Exception:
+                flair_comment_count.update({flair: num_comments})
+
+            spinner.text = f'{c}: Analysing posts from {created}'
+            c += 1
+
+    flairs.update({'score': flair_scores})
+    flairs.update({'frequency': flair_count})
+    flairs.update({'comments': flair_comment_count})
+
+    df = pd.DataFrame(flairs)
+    print(df)
+    graphs(sub, df)
+
+
+def graphs(sub, df):
+    spinner.text = f'Building your graphs'
+
+    df.plot.bar(figsize=(8, 8))
+    plt.tight_layout(pad=5, w_pad=10, h_pad=10)
+    plt.savefig(f'graphs/{sub}-bar.png')
+
+    df.plot.pie(y='score', figsize=(8, 8))
+    plt.tight_layout(pad=5, w_pad=10, h_pad=10)
+    plt.savefig(f'graphs/{sub}-score-pie.png')
+
+    df.plot.pie(y='frequency', figsize=(8, 8))
+    plt.tight_layout(pad=5, w_pad=10, h_pad=10)
+    plt.savefig(f'graphs/{sub}-frequency-pie.png')
+
+    df.plot.pie(y='comments', figsize=(8, 8))
+    plt.tight_layout(pad=5, w_pad=10, h_pad=10)
+    plt.savefig(f'graphs/{sub}-comments-pie.png')
+
+    spinner.succeed(f'All done. Have a nice day!')
+
+
+def main():
+    args = get_args()
+    sub = args.sub
+    years = args.years
+    months = args.months
+    days = args.days
+
+    if years:
+        back = relativedelta(years=years)
+    elif months:
+        back = relativedelta(months=months)
+    elif days:
+        back = relativedelta(days=days)
     else:
-        all_history = False
+        spinner.fail(f'Enter correct arguments')
 
-    print(C.yellow + """
-╔═╗╦  ╔═╗╦╦═╗  ╔═╗╔╗╔╔═╗╦ ╦ ╦╔╦╗╦╔═╗╔═╗
-╠╣ ║  ╠═╣║╠╦╝  ╠═╣║║║╠═╣║ ╚╦╝ ║ ║║  ╚═╗
-╚  ╩═╝╩ ╩╩╩╚═  ╩ ╩╝╚╝╩ ╩╩═╝╩  ╩ ╩╚═╝╚═╝
-    """)
-    print(C.white + 'Getting stats from /r/{}\n'.format(my_subreddit))
+    if back:
+        search(sub, back)
 
-    reddit = praw.Reddit(client_id=client_id,
-                         client_secret=client_secret,
-                         user_agent=user_agent)
-
-    count = {}
-    score = {}
-    comments = {}
-    subreddit = reddit.subreddit(my_subreddit)
-
-    counter = 0
-    last = time.time()
-    last_end = ''
-    back_end = ''
-
-    spinner = Halo(text='', spinner='dots')
+if __name__ == "__main__":
+    spinner = Halo(text='Booting up', spinner='dots')
     spinner.start()
-
-    while True:
-
-        if counter > 1:
-            last_one = save_last()
-            last = last_one - 10
-
-        orig = datetime.datetime.fromtimestamp(last)
-        new = orig - relativedelta(months=months_back)
-        back = new.timestamp()
-
-        if last == last_end and back == back_end:
-            break
-
-        back_end = back
-        last_end = last
-        last_r = datetime.datetime.utcfromtimestamp(last).strftime('%d-%m-%Y')
-        back_r = datetime.datetime.utcfromtimestamp(back).strftime('%d-%m-%Y')
-
-        msg = str(last_r) + ' - ' + str(back_r)
-        spinner.text = msg
-
-        def save_last():
-            last = submission.created_utc
-            return last
-
-        for submission in subreddit.submissions(int(back), int(last)):
-            # print(submission)
-            #print(C.green + submission.title)
-
-            if not submission.link_flair_text in count:
-                count[submission.link_flair_text] = 0
-            else:
-                count[submission.link_flair_text] += 1
-
-            if not submission.link_flair_text in score:
-                score[submission.link_flair_text] = 0
-            else:
-                score[submission.link_flair_text] += submission.score
-
-            if not submission.link_flair_text in comments:
-                comments[submission.link_flair_text] = 0
-            else:
-                comments[submission.link_flair_text] += submission.num_comments
-
-            counter += 1
-            save_last()
-
-        if not all_history:
-            break
-
-        time.sleep(6)
-
-    def plot():
-        spinner.text = 'Plotting graphs'
-        plt.style.use('ggplot')
-        plt.rcParams['font.size'] = 7
-        x = np.arange(len(count))
-        ax = plt.subplot(111)
-        ax.bar(x - 0.2, count.values(), width=0.2, align='center')
-        ax.bar(x, score.values(), width=0.2, align='center')
-        ax.bar(x + 0.2, comments.values(), width=0.2, align='center')
-        ax.legend(('Flair Count', 'Score', 'Comments'))
-        plt.xticks(x, count.keys(), rotation=0)
-        plt.tight_layout()
-        plt.savefig(bar_path, dpi=300)
-        # plt.show()
-
-        itemz = collections.OrderedDict(count)
-        count1 = []
-        count2 = []
-
-        for key, value in itemz.items():
-            count1.append(key)
-            count2.append(value)
-
-        fig1, ax1 = plt.subplots()
-        ax1.pie(count2, labels=count1, autopct='%1.1f%%',
-                shadow=False, startangle=90)
-        ax1.axis('equal')
-        plt.tight_layout()
-        plt.savefig(pi_path, dpi=300)
-        # plt.show()
-
-    plot()
-    msg = 'Total posts: ' + str(counter - 1)
-    spinner.succeed(msg)
-    spinner.stop()
-
-    print(C.green + '\nFlair count')
-    for k, v in count.items():
-        print(k, v)
-
-    print(C.green + '\nScore count')
-    for k, v in score.items():
-        print(k, v)
-
-    print(C.green + '\nComment count')
-    for k, v in comments.items():
-        print(k, v)
-
-    print(C.white + '\nYour graphs have been saved to the graphs/ folder\n')
-
-except Exception as e:
-    print(C.red + str(e))
-    print(C.white + '\nExiting\n')
-except KeyboardInterrupt:
-    print(C.white + '\nExiting\n')
+    main()

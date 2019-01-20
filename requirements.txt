@@ -1,5 +1,5 @@
-praw
-numpy
-halo
-python-dateutil
+requests
 argparse
+matplotlib
+halo
+psaw
